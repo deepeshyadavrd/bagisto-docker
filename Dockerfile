@@ -1,4 +1,4 @@
-FROM php:8.2-fpm
+FROM php:8.2-cli
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -8,24 +8,36 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libzip-dev \
     libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
     libicu-dev
 
+# Configure GD
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+
 # Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath intl
+RUN docker-php-ext-install \
+    pdo_mysql \
+    mbstring \
+    zip \
+    exif \
+    pcntl \
+    bcmath \
+    intl \
+    gd
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www
+WORKDIR /app
 
 COPY . .
 
-# Install dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Increase memory for composer
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader
 
-# Permissions
 RUN chmod -R 775 storage bootstrap/cache
 
 EXPOSE 10000
